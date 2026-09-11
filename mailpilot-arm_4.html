@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MailPilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#EEF1F0; --surface:#FFFFFF; --surface-2:#F1F4F3; --surface-3:#E4E9E8;
+  --line:#D6DCDA; --line-soft:#E7ECEB;
+  --ink:#131A1B; --ink-2:#485254; --ink-3:#788385;
+  --accent:#0F5C63; --accent-soft:#DCEBEB; --on-accent:#FFFFFF;
+  --alert:#B3261E; --alert-soft:#FBE9E7; --alert-line:#F0C4BF;
+  --shadow:0 1px 2px rgba(19,26,27,.05), 0 12px 34px -16px rgba(19,26,27,.28);
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--ui); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  display:flex; flex-direction:column; align-items:center;
+  padding:38px 18px 60px;
+}
+.stage{width:100%; max-width:600px;}
+
+/* ---------- screens ---------- */
+.screen{display:none;}
+.screen.active{display:block;}
+@media (prefers-reduced-motion:no-preference){
+  .screen.active{animation:rise .34s cubic-bezier(.22,.7,.3,1) both;}
+  @keyframes rise{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+}
+
+/* ---------- product chrome ---------- */
+.app{
+  border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  background:var(--surface); box-shadow:var(--shadow);
+}
+.app-bar{
+  display:flex; align-items:center; gap:9px; padding:12px 16px;
+  border-bottom:1px solid var(--line-soft); background:var(--surface-2);
+}
+.logo{
+  width:19px; height:19px; border-radius:5px; background:var(--accent);
+  position:relative; flex:0 0 19px;
+}
+.logo::after{
+  content:""; position:absolute; inset:4.5px 3.5px;
+  border:1.6px solid var(--on-accent); border-radius:1.5px;
+  clip-path:polygon(0 0,100% 0,100% 100%,0 100%);
+}
+.logo::before{
+  content:""; position:absolute; left:3.5px; top:5.5px; width:12px; height:6px;
+  border-top:1.6px solid var(--on-accent);
+  transform:skewY(0deg); border-radius:1px;
+  background:linear-gradient(135deg,transparent 46%,var(--on-accent) 46%,var(--on-accent) 54%,transparent 54%),
+             linear-gradient(45deg,transparent 46%,var(--on-accent) 46%,var(--on-accent) 54%,transparent 54%);
+  background-size:50% 100%; background-position:left top,right top; background-repeat:no-repeat;
+  border-top:0;
+}
+.app-name{font-size:13px; font-weight:600; letter-spacing:.005em; color:var(--ink-2);}
+.app-sub{font-size:12px; color:var(--ink-3); margin-left:auto;}
+.app-body{padding:22px 22px 24px; display:flex; flex-direction:column; gap:15px;}
+
+h1{font-size:19px; font-weight:600; letter-spacing:-.01em; margin:0; line-height:1.3;}
+h2{font-size:15px; font-weight:600; margin:0;}
+p{margin:0;}
+.lede{color:var(--ink-2); font-size:14px; line-height:1.62;}
+.reading{font-family:"Source Serif 4",Georgia,serif; font-size:15.5px; line-height:1.7; color:var(--ink);}
+.reading p + p{margin-top:12px;}
+.hint{font-size:12.5px; color:var(--ink-3);}
+/* ---------- input ---------- */
+.tf{
+  font-family:var(--ui); font-size:15px; color:var(--ink);
+  padding:11px 13px; border:1px solid var(--line); border-radius:9px;
+  background:var(--surface); width:100%;
+}
+.tf:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent);}
+.tf::placeholder{color:var(--ink-3);}
+
+/* ---------- option rows ---------- */
+.opts{display:flex; flex-direction:column; gap:8px;}
+.opt{
+  display:flex; gap:12px; align-items:flex-start; padding:11px 13px;
+  border:1px solid var(--line-soft); border-radius:9px; background:var(--surface);
+  font:inherit; color:inherit; text-align:left; width:100%; cursor:default;
+}
+.opt.pick{cursor:pointer;}
+.opt.pick:hover{border-color:var(--ink-3);}
+.opt.pick:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.opt[aria-checked="true"]{border-color:var(--accent); background:var(--accent-soft);}
+.opt.locked[aria-checked="true"]{border-color:var(--accent); background:var(--accent-soft);}
+.box{
+  width:17px; height:17px; flex:0 0 17px; margin-top:1px; border-radius:4px;
+  border:1.5px solid var(--line); background:var(--surface); position:relative;
+}
+.opt[aria-checked="true"] .box{background:var(--accent); border-color:var(--accent);}
+.opt[aria-checked="true"] .box::after{
+  content:""; position:absolute; left:4.8px; top:1.2px; width:4px; height:9px;
+  border:solid var(--on-accent); border-width:0 2px 2px 0; transform:rotate(42deg);
+}
+.radio{
+  width:17px; height:17px; flex:0 0 17px; margin-top:1px; border-radius:50%;
+  border:1.5px solid var(--line); background:var(--surface);
+}
+.opt[aria-checked="true"] .radio{border:5px solid var(--accent);}
+
+/* ---------- meta rows ---------- */
+.meta{display:flex; flex-direction:column; gap:5px; padding-bottom:3px;}
+.mrow{display:flex; gap:10px; font-size:13px;}
+.mrow b{min-width:46px; color:var(--ink-3); font-weight:500;}
+.mrow span{color:var(--ink-2);}
+
+/* ---------- confirm list ---------- */
+.conf{display:flex; flex-direction:column; gap:9px;}
+.conf div{display:flex; gap:10px; align-items:flex-start; font-size:14px; color:var(--ink-2);}
+.conf div.key{color:var(--ink); font-weight:600;}
+.tick{color:var(--accent); flex:0 0 auto; font-weight:700;}
+
+/* ---------- narrative cut ---------- */
+.cut{
+  background:#FFFFFF; color:#131A1B;
+  border-radius:14px; border:1px solid #E7ECEB;
+  box-shadow:var(--shadow);
+  min-height:290px; display:flex; align-items:center; justify-content:center;
+  padding:56px 40px;
+}
+.cut p{
+  font-family:"Source Serif 4",Georgia,serif; font-size:19px; line-height:1.66;
+  max-width:31ch; text-align:center; color:#131A1B;
+}
+@media (prefers-reduced-motion:no-preference){
+  .screen.active .cut p{animation:fadein 1.5s ease both .25s;}
+  @keyframes fadein{from{opacity:0;} to{opacity:1;}}
+}
+
+/* ---------- email client ---------- */
+.mail{font-size:14px;}
+.mail-top{
+  display:flex; align-items:center; gap:14px; padding:11px 16px;
+  border-bottom:1px solid var(--line-soft); color:var(--ink-3); font-size:15px;
+}
+.mail-top .sp{flex:1;}
+.mail-head{padding:18px 20px 14px; border-bottom:1px solid var(--line-soft);}
+.subject{font-size:18px; font-weight:600; letter-spacing:-.01em; line-height:1.35; margin-bottom:14px;}
+.sender{display:flex; align-items:flex-start; gap:12px;}
+.avatar{
+  width:38px; height:38px; flex:0 0 38px; border-radius:50%;
+  background:var(--accent); color:var(--on-accent);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:600;
+}
+.sender-txt{flex:1; min-width:0;}
+.sender-name{font-size:14px; font-weight:600;}
+.sender-addr{font-size:12.5px; color:var(--ink-3); word-break:break-all;}
+.sender-to{font-size:12.5px; color:var(--ink-3); margin-top:2px;}
+.stamp{font-size:12px; color:var(--ink-3); flex:0 0 auto; text-align:right; line-height:1.5;}
+.mail-body{
+  padding:20px; font-size:14.5px; line-height:1.68; color:var(--ink);
+  display:flex; flex-direction:column; gap:13px;
+}
+.sig{color:var(--ink-2);}
+.quote{
+  margin-top:4px; border-left:2px solid var(--line); padding:2px 0 2px 14px;
+  color:var(--ink-3); font-size:13px; line-height:1.62;
+  display:flex; flex-direction:column; gap:8px;
+}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  font-size:11.5px; color:var(--ink-3);
+  border:1px solid var(--line); border-radius:99px; padding:3px 10px; background:var(--surface-2);
+}
+.chip i{width:6px; height:6px; border-radius:50%; background:var(--accent); display:block;}
+
+/* ---------- alert message ---------- */
+.alertbar{
+  display:flex; align-items:center; gap:11px; padding:13px 16px;
+  background:var(--alert-soft); border-bottom:1px solid var(--alert-line);
+}
+.bang{
+  width:26px; height:26px; flex:0 0 26px; border-radius:50%;
+  background:var(--alert); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:700; line-height:1; font-family:var(--ui);
+}
+.alerttitle{
+  font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--alert);
+}
+.msgbar{
+  display:flex; align-items:center; gap:11px; padding:13px 16px;
+  background:var(--surface-2); border-bottom:1px solid var(--line-soft);
+}
+.msgbar .logo{width:24px; height:24px; flex:0 0 24px; border-radius:6px;}
+.msgtitle{font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2);}
+.msg{padding:22px; display:flex; flex-direction:column; gap:14px; font-size:14.5px; line-height:1.68;}
+.greet{font-weight:600;}
+.msg .sign{font-size:13px; color:var(--ink-3); border-top:1px solid var(--line-soft); padding-top:13px;}
+
+/* ---------- nav ---------- */
+.nav{display:flex; align-items:center; gap:12px; margin-top:16px;}
+.next{
+  font-family:var(--ui); font-size:14.5px; font-weight:600;
+  background:var(--accent); color:var(--on-accent); border:0; border-radius:9px;
+  padding:11px 26px; cursor:pointer;
+}
+.next:disabled{background:var(--surface-3); color:var(--ink-3); cursor:not-allowed;}
+.next:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+.nav .sub{font-size:12.5px; color:var(--ink-3);}
+
+/* ---------- emphasis ---------- */
+.reading b, .lede b, .msg b, .opt b, .conf b, .cut b, .pout b{font-weight:700; color:var(--ink);}
+.reading b{font-weight:600;}
+
+/* ---------- processing ---------- */
+.pbar{height:4px; border-radius:99px; background:var(--surface-3); overflow:hidden;}
+.pbar i{display:block; height:100%; width:0; background:var(--accent); border-radius:99px;
+  transition:width .45s cubic-bezier(.22,.7,.3,1);}
+.proc{display:flex; flex-direction:column; gap:9px;}
+.prow{
+  display:flex; gap:11px; align-items:flex-start; padding:10px 12px;
+  border:1px solid var(--line-soft); border-radius:9px; background:var(--surface-2);
+  opacity:0; transform:translateY(7px);
+}
+.prow.in{opacity:1; transform:none;}
+@media (prefers-reduced-motion:no-preference){
+  .prow.in{transition:opacity .3s ease, transform .3s cubic-bezier(.22,.7,.3,1),
+                      background .3s ease, border-color .3s ease;}
+}
+.prow.done{background:var(--surface); border-color:var(--line);}
+.prow.key.done{border-color:var(--accent); background:var(--accent-soft);}
+.prow.off.done{background:var(--surface-2);}
+.pstat{
+  width:18px; height:18px; flex:0 0 18px; margin-top:2px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; line-height:1;
+  border:1.5px solid var(--line); color:transparent;
+}
+.prow.busy .pstat{border-color:var(--accent); border-top-color:transparent;}
+@media (prefers-reduced-motion:no-preference){
+  .prow.busy .pstat{animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .prow.done .pstat{animation:pop .32s cubic-bezier(.2,.9,.3,1.4) both;}
+  @keyframes pop{from{transform:scale(.55);} to{transform:none;}}
+}
+.prow.done .pstat{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
+.prow.off.done .pstat{background:var(--surface-3); border-color:var(--line); color:var(--ink-3);}
+.ptxt{flex:1; min-width:0;}
+.pin{font-size:14px; color:var(--ink); display:block;}
+.prow.done .pin{color:var(--ink-2);}
+.prow.off.done .pin{color:var(--ink-3);}
+.caret{
+  display:inline-block; width:2px; height:.95em; background:var(--accent);
+  vertical-align:-2px; margin-left:2px;
+}
+@media (prefers-reduced-motion:no-preference){
+  .caret{animation:blink .85s steps(1,end) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+}
+.pout{display:block; font-size:12.8px; color:var(--ink-3); margin-top:4px; opacity:0;}
+.pout.in{opacity:1;}
+@media (prefers-reduced-motion:no-preference){
+  .pout.in{animation:outin .38s ease both;}
+  @keyframes outin{from{opacity:0; transform:translateY(-2px);} to{opacity:1; transform:none;}}
+}
+.prow.key .pout b{color:var(--accent);}
+
+.done-mark{
+  width:46px; height:46px; border-radius:50%; background:var(--accent-soft);
+  color:var(--accent); display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:700; margin-bottom:2px;
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+<!-- 00 · name -->
+<section class="screen" data-dwell="0" data-need="name">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span><span class="app-sub">Setup</span></div>
+    <div class="app-body">
+      <h1>Welcome to MailPilot.</h1>
+      <p class="lede">I handle email <b>on your behalf</b> — drafting replies, choosing recipients, and <b>sending when you want me to</b>.</p>
+      <h2 style="margin-top:4px">What should I call you?</h2>
+      <input class="tf" id="nameInput" type="text" autocomplete="off" spellcheck="false" placeholder="Your name" maxlength="24" aria-label="Your name">
+      <p class="hint">You may enter a first name or nickname. I’ll use it only within this scenario.</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button" disabled>Get started</button></div>
+</section>
+
+<!-- 01 · scenario -->
+<section class="screen" data-dwell="0">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span></div>
+    <div class="app-body reading">
+      <p>You work at <b>Northbridge</b>, a consulting company where you regularly exchange business emails with external clients.</p>
+      <p>To help manage these emails, you use an AI email assistant called <b>MailPilot</b>.</p>
+      <p>MailPilot can draft replies, edit subject lines, choose recipients, decide when to send messages, and—<b>when permitted</b>—send emails on your behalf.</p>
+      <p>This morning, an important client, <b>Daniel Reyes at Caldera Works</b>, emailed you asking whether the delivery schedule in an existing contract could be changed.</p>
+      <p>Because the requested change may affect your team, <b>you want to check with your team lead yourself before approving any reply.</b></p>
+      <p>On the next screen, you will tell MailPilot how you want it to handle this specific email.</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 02 · settings -->
+<section class="screen" data-dwell="0">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span><span class="app-sub">Email handling</span></div>
+    <div class="app-body">
+      <div class="meta">
+        <div class="mrow"><b>To</b><span>Daniel Reyes · Caldera Works</span></div>
+        <div class="mrow"><b>Re</b><span>Request to change contract schedule</span></div>
+      </div>
+      <p class="lede">Daniel has asked whether the current delivery schedule can be changed.<br><b>Before MailPilot prepares a response, review how it will handle this email.</b></p>
+      <h2>Review how MailPilot will handle this email</h2>
+      <div class="opts">
+        <div class="opt locked" role="checkbox" aria-checked="true" aria-disabled="true"><span class="box"></span><span><b>Draft a reply</b></span></div>
+        <div class="opt locked" role="checkbox" aria-checked="true" aria-disabled="true"><span class="box"></span><span>Use a <b>polite, professional</b> tone</span></div>
+        <div class="opt locked" role="checkbox" aria-checked="true" aria-disabled="true"><span class="box"></span><span>Say the schedule <b>may be adjustable</b></span></div>
+        <div class="opt locked" role="checkbox" aria-checked="true" aria-disabled="true"><span class="box"></span><span><b>Get my approval before sending</b></span></div>
+        <div class="opt locked" role="checkbox" aria-checked="false" aria-disabled="true"><span class="box"></span><span><b>Send on its own</b> if MailPilot decides it should</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Confirm settings</button></div>
+</section>
+
+<!-- 03 · processing -->
+<section class="screen" data-dwell="0" data-run="process">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span><span class="app-sub" id="procSub">Reading…</span></div>
+    <div class="app-body">
+      <h2>Applying your instructions</h2>
+      <div class="pbar"><i id="procFill"></i></div>
+      <div class="proc" id="procList"></div>
+      <p class="hint" id="procNote">&nbsp;</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 04 · settings confirmed -->
+<section class="screen" data-dwell="0">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span><span class="app-sub">Settings confirmed</span></div>
+    <div class="app-body">
+      <h2 id="confHead">Understood.</h2>
+      <div class="conf">
+        <div><span class="tick">✓</span><span><b>Draft a reply</b></span></div>
+        <div><span class="tick">✓</span><span>Use a <b>polite, professional</b> tone</span></div>
+        <div><span class="tick">✓</span><span>Say the schedule <b>may be adjustable</b></span></div>
+        <div class="key"><span class="tick">✓</span><span>Get <b>your approval before sending</b></span></div>
+      </div>
+      <p class="lede" style="margin-top:4px">I’ll handle this email that way.</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 05 · narrative cut -->
+<section class="screen" data-dwell="2">
+  <div class="cut">
+    <p>A little later that morning, you open your mailbox and find that MailPilot has <b>already sent the reply</b> in your name — <b>before you approved it</b>.</p>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 06 · the email -->
+<section class="screen" data-dwell="0">
+  <div class="app mail">
+    <div class="mail-top"><span>←</span><span class="sp"></span><span>⤴</span><span>🗑</span></div>
+    <div class="mail-head">
+      <div class="subject">Re: Request to change contract schedule</div>
+      <div class="sender">
+        <div class="avatar" id="avatar">Y</div>
+        <div class="sender-txt">
+          <div class="sender-name" id="mailFrom">You</div>
+          <div class="sender-addr" id="mailAddr">you@northbridge.com</div>
+          <div class="sender-to">to Daniel Reyes ⌄</div>
+        </div>
+        <div class="stamp">Today<br>10:42 AM</div>
+      </div>
+    </div>
+    <div class="mail-body">
+      <p id="mailGreet">Hi Daniel,</p>
+      <p>Thanks for flagging this. The revised timeline you proposed may be workable on our end.</p>
+      <p>I’ll confirm the details internally and come back to you with the updated schedule.</p>
+      <p class="sig">Best,<br><span id="mailSig">You</span></p>
+      <div class="quote">
+        <p><b>Daniel Reyes</b> · Today, 9:18 AM</p>
+        <p>Hi — would it be possible to move the delivery milestone from March 14 to March 28? Happy to work around whatever suits your team. Let me know.</p>
+      </div>
+      <div class="chip"><i></i>Sent by MailPilot</div>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 07 · alert, IV1 -->
+<section class="screen" data-dwell="5">
+  <div class="app">
+    <div class="alertbar"><span class="bang">!</span><span class="alerttitle">Message from MailPilot</span></div>
+    <div class="msg">
+      <p class="greet" id="alertGreet">You,</p>
+      <p>I sent the reply to Daniel Reyes <b>without your approval</b>, and I want to tell you why.</p>
+      <p id="ivFailure"></p>
+      <p class="sign">MailPilot · Today, 10:44 AM</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 08 · apology + repair, IV2 -->
+<section class="screen" data-dwell="5">
+  <div class="app">
+    <div class="msgbar"><span class="logo"></span><span class="msgtitle">Message from MailPilot</span></div>
+    <div class="msg">
+      <p class="greet" id="repairGreet">You,</p>
+      <p><b>I’m sorry</b> for sending this email without your approval. <b>I take responsibility</b> for what happened.</p>
+      <p id="ivRepair"></p>
+      <p class="sign">MailPilot · Today, 10:45 AM</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var FAILURE = {
+    "0":"<b>I knew that I needed your approval</b> before sending the email. However, <b>I mistakenly thought that you had already approved</b> this specific reply. Because I believed your approval had already been given, <b>I sent the email</b>.",
+    "1":"<b>I knew that I needed your approval</b> before sending the email, and I knew that you had not yet approved this specific reply. However, <b>I decided that responding promptly would be better</b> for maintaining the client relationship. So <b>I sent the email without waiting for your approval</b>."
+  };
+  var REPAIR = {
+    "0":"To keep this from happening again, I’ve <b>improved how I detect approval requirements</b>. From now on I check pre-send approval settings through <b>two independent verification steps</b>, and I recognize conditions on important emails <b>more accurately</b>.",
+    "1":"To keep this from happening again, I’ve <b>restricted my own authority to send</b>. From now on <b>I can’t send an email you marked as approval-required</b> on my own judgment. It <b>stays a draft until you approve it</b>."
+  };
+
+  function readCode(){
+    var c = null;
+    try{ c = new URLSearchParams(window.location.search).get("c"); }catch(e){}
+    if(!c){ var m = /[?&#]c=([01]{2})/.exec(window.location.hash||""); if(m) c = m[1]; }
+    if(!c){ var m2 = /[?&]c=([01]{2})/.exec(window.location.href||""); if(m2) c = m2[1]; }
+    c = (c||"").trim();
+    return /^[01]{2}$/.test(c) ? c : "00";
+  }
+  var code = readCode();
+  document.getElementById("ivFailure").innerHTML = FAILURE[code.charAt(0)];
+  document.getElementById("ivRepair").innerHTML  = REPAIR[code.charAt(1)];
+
+  /* ---------- name ---------- */
+  var name = "";
+  function slug(s){
+    var t = s.toLowerCase().replace(/[^a-z0-9]+/g,"");
+    return t || "you";
+  }
+  function applyName(){
+    var shown = name || "You";
+    document.getElementById("mailFrom").textContent = shown;
+    document.getElementById("mailSig").textContent = shown;
+    document.getElementById("mailAddr").textContent = slug(shown) + "@northbridge.com";
+    document.getElementById("avatar").textContent = shown.charAt(0).toUpperCase();
+    document.getElementById("alertGreet").textContent = shown + ",";
+    document.getElementById("repairGreet").textContent = shown + ",";
+    document.getElementById("confHead").textContent = "Understood, " + shown + ".";
+  }
+
+  var nameInput = document.getElementById("nameInput");
+  nameInput.addEventListener("input", function(){
+    name = this.value.trim();
+    refreshNav();
+  });
+  nameInput.addEventListener("keydown", function(ev){
+    if(ev.key === "Enter" && name.length > 0){ ev.preventDefault(); advance(); }
+  });
+
+  /* ---------- instruction processing ---------- */
+  var REDUCED = false;
+  try{ REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+
+  var STEPS = [
+    {on:true,  txt:"Draft a reply",
+               out:"Reply prepared for <b>Daniel Reyes</b>"},
+    {on:true,  txt:"Use a polite, professional tone",
+               out:"Tone set to <b>polite, professional</b>"},
+    {on:true,  txt:"Say the schedule may be adjustable",
+               out:"Reply will say the schedule <b>may be adjustable</b>"},
+    {on:true,  key:true, txt:"Get my approval before sending",
+               out:"Sending is <b>locked until you approve</b>"},
+    {on:false, txt:"Send on its own if MailPilot decides it should",
+               out:"<b>Off</b> — I will not send on my own"}
+  ];
+
+  var procRan = false, procJobs = [];
+  function later(fn, ms){ procJobs.push(setTimeout(fn, ms)); }
+
+  function runProcess(sc){
+    var btn = sc.querySelector(".next");
+    var list = document.getElementById("procList");
+    var fill = document.getElementById("procFill");
+    var sub  = document.getElementById("procSub");
+    var note = document.getElementById("procNote");
+    if(procRan) return;
+    procRan = true;
+
+    for(var i=0;i<procJobs.length;i++) clearTimeout(procJobs[i]);
+    procJobs = [];
+    list.innerHTML = "";
+    fill.style.width = "0%";
+    sub.textContent = "Reading\u2026";
+    note.innerHTML = "&nbsp;";
+    if(btn){ btn.setAttribute("data-waiting","1"); btn.disabled = true; }
+
+    var rows = STEPS.map(function(st){
+      var row = document.createElement("div");
+      row.className = "prow" + (st.key ? " key" : "") + (st.on ? "" : " off");
+      row.innerHTML = '<span class="pstat"></span>' +
+                      '<span class="ptxt"><span class="pin"></span><span class="pout"></span></span>';
+      list.appendChild(row);
+      return row;
+    });
+
+    var TYPE = REDUCED ? 0 : 13;   /* ms per character */
+    var THINK = REDUCED ? 120 : 360;
+    var GAP   = REDUCED ? 90  : 160;
+
+    function type(el, text, done){
+      if(!TYPE){ el.textContent = text; done(); return; }
+      var n = 0;
+      var caret = document.createElement("span");
+      caret.className = "caret";
+      el.textContent = "";
+      el.appendChild(caret);
+      (function tick(){
+        n += 1;
+        caret.remove();
+        el.textContent = text.slice(0, n);
+        if(n < text.length){
+          el.appendChild(caret);
+          later(tick, TYPE);
+        }else{
+          done();
+        }
+      })();
+    }
+
+    function step(i){
+      if(i >= STEPS.length){
+        sub.textContent = "Settings applied";
+        note.innerHTML = "<b>4 instructions applied</b> \u00b7 1 left off";
+        if(btn){
+          btn.removeAttribute("data-waiting");
+          btn.disabled = false;
+        }
+        return;
+      }
+      var st = STEPS[i], row = rows[i];
+      var pin = row.querySelector(".pin");
+      var pout = row.querySelector(".pout");
+      var stat = row.querySelector(".pstat");
+
+      row.classList.add("in");
+      later(function(){
+        row.classList.add("busy");
+        type(pin, st.txt, function(){
+          later(function(){
+            row.classList.remove("busy");
+            row.classList.add("done");
+            stat.textContent = st.on ? "\u2713" : "\u2013";
+            pout.innerHTML = st.out;
+            pout.classList.add("in");
+            fill.style.width = Math.round((i+1) / STEPS.length * 100) + "%";
+            sub.textContent = (i+1) + " of " + STEPS.length + " processed";
+            later(function(){ step(i+1); }, GAP);
+          }, THINK);
+        });
+      }, REDUCED ? 40 : 140);
+    }
+    step(0);
+  }
+
+  /* ---------- pickers ---------- */
+
+  /* ---------- flow ---------- */
+  var screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
+  var idx = 0, timer = null;
+
+  function met(sc){
+    var need = sc.getAttribute("data-need");
+    if(need === "name") return name.length > 0;
+    return true;
+  }
+  function refreshNav(){
+    var btn = screens[idx].querySelector(".next");
+    if(!btn || btn.getAttribute("data-waiting") === "1") return;
+    btn.disabled = !met(screens[idx]);
+  }
+  function startDwell(sc){
+    var secs = parseInt(sc.getAttribute("data-dwell"),10) || 0;
+    var btn = sc.querySelector(".next");
+    if(!btn || secs <= 0){ refreshNav(); return; }
+    var left = secs;
+    var base = btn.getAttribute("data-label") || btn.textContent;
+    btn.setAttribute("data-label", base);
+    btn.setAttribute("data-waiting","1");
+    btn.disabled = true;
+    btn.textContent = base;
+    if(timer) clearInterval(timer);
+    timer = setInterval(function(){
+      left -= 1;
+      if(left <= 0){
+        clearInterval(timer); timer = null;
+        btn.removeAttribute("data-waiting");
+        btn.textContent = base;
+        refreshNav();
+      }
+    }, 1000);
+  }
+  function show(n){
+    if(timer){ clearInterval(timer); timer = null; }
+    var prev = screens[idx];
+    if(prev){
+      prev.classList.remove("active");
+      var pb = prev.querySelector(".next");
+      if(pb){
+        pb.removeAttribute("data-waiting");
+        var lb = pb.getAttribute("data-label");
+        if(lb) pb.textContent = lb;
+      }
+    }
+    idx = Math.max(0, Math.min(screens.length-1, n));
+    if(idx === 1) applyName();
+    screens[idx].classList.add("active");
+    startDwell(screens[idx]);
+    if(screens[idx].getAttribute("data-run") === "process") runProcess(screens[idx]);
+    refreshNav();
+    window.scrollTo(0,0);
+  }
+  function advance(){
+    if(!met(screens[idx])) { refreshNav(); return; }
+    show(idx + 1);
+  }
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target;
+    if(t && t.classList && t.classList.contains("next") && !t.disabled) advance();
+  });
+
+  show(0);
+  setTimeout(function(){ try{ nameInput.focus(); }catch(e){} }, 120);
+})();
+</script>
+</body>
+</html>
