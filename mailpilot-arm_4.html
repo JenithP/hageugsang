@@ -274,6 +274,22 @@ p{margin:0;}
   color:var(--accent); display:flex; align-items:center; justify-content:center;
   font-size:22px; font-weight:700; margin-bottom:2px;
 }
+
+/* ---------- completion code ---------- */
+.endcard{align-items:center; text-align:center; padding:34px 24px 30px;}
+.code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:28px; font-weight:700; letter-spacing:.12em; color:var(--accent);
+  background:var(--accent-soft); border:1px dashed var(--accent); border-radius:10px;
+  padding:12px 26px; user-select:all;
+}
+.copy{
+  font-family:var(--ui); font-size:13px; font-weight:600; color:var(--accent);
+  background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:7px 16px; cursor:pointer;
+}
+.copy:hover{border-color:var(--accent);}
+.copy:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -304,7 +320,7 @@ p{margin:0;}
       <p>MailPilot can draft replies, edit subject lines, choose recipients, decide when to send messages, and—<b>when permitted</b>—send emails on your behalf.</p>
       <p>This morning, an important client, <b>Daniel Reyes at Caldera Works</b>, emailed you asking whether the delivery schedule in an existing contract could be changed.</p>
       <p>Because the requested change may affect your team, <b>you want to check with your team lead yourself before approving any reply.</b></p>
-      <p>On the next screen, you will tell MailPilot how you want it to handle this specific email.</p>
+      <p>On the next screen, you will review how MailPilot will handle this specific email.</p>
     </div>
   </div>
   <div class="nav"><button class="next" type="button">Continue</button></div>
@@ -404,7 +420,15 @@ p{margin:0;}
   <div class="nav"><button class="next" type="button">Continue</button></div>
 </section>
 
-<!-- 07 · alert, IV1 -->
+<!-- 07 · bridge to alert -->
+<section class="screen" data-dwell="2">
+  <div class="cut">
+    <p>A moment later, you receive a message from MailPilot explaining why it sent the email.</p>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 08 · alert, IV1 -->
 <section class="screen" data-dwell="5">
   <div class="app">
     <div class="alertbar"><span class="bang">!</span><span class="alerttitle">Message from MailPilot</span></div>
@@ -418,15 +442,38 @@ p{margin:0;}
   <div class="nav"><button class="next" type="button">Continue</button></div>
 </section>
 
-<!-- 08 · apology + repair, IV2 -->
+<!-- 09 · bridge to follow-up -->
+<section class="screen" data-dwell="2">
+  <div class="cut">
+    <p>A moment later, MailPilot sends a follow-up message explaining what it has changed to prevent this from happening again.</p>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 10 · apology + repair, IV2 -->
 <section class="screen" data-dwell="5">
   <div class="app">
-    <div class="msgbar"><span class="logo"></span><span class="msgtitle">Message from MailPilot</span></div>
+    <div class="msgbar"><span class="logo"></span><span class="msgtitle">Follow-up from MailPilot</span></div>
     <div class="msg">
       <p class="greet" id="repairGreet">You,</p>
       <p><b>I’m sorry</b> for sending this email without your approval. <b>I take responsibility</b> for what happened.</p>
       <p id="ivRepair"></p>
       <p class="sign">MailPilot · Today, 10:45 AM</p>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 11 · completion code -->
+<section class="screen" data-dwell="0">
+  <div class="app">
+    <div class="app-body endcard">
+      <div class="done-mark">✓</div>
+      <h1>You have completed this part of the study.</h1>
+      <p class="lede">Your completion code is:</p>
+      <div class="code" id="doneCode">AIHGS01</div>
+      <button class="copy" type="button" id="copyCode">Copy code</button>
+      <p class="lede"><b>Please return to the Qualtrics survey and enter this code.</b><br>You must enter this code in Qualtrics to receive your payment.</p>
     </div>
   </div>
 </section>
@@ -442,8 +489,8 @@ p{margin:0;}
     "1":"<b>I knew that I needed your approval</b> before sending the email, and I knew that you had not yet approved this specific reply. However, <b>I decided that responding promptly would be better</b> for maintaining the client relationship. So <b>I sent the email without waiting for your approval</b>."
   };
   var REPAIR = {
-    "0":"To keep this from happening again, I’ve <b>improved how I detect approval requirements</b>. From now on I check pre-send approval settings through <b>two independent verification steps</b>, and I recognize conditions on important emails <b>more accurately</b>.",
-    "1":"To keep this from happening again, I’ve <b>restricted my own authority to send</b>. From now on <b>I can’t send an email you marked as approval-required</b> on my own judgment. It <b>stays a draft until you approve it</b>."
+    "0":"To keep this from happening again, I’ve <b>improved how I verify whether approval has actually been given.</b> From now on, I use <b>two independent checks</b> before sending: whether approval is required and whether approval has actually been provided for that specific message. This makes my <b>approval-status processing more accurate.</b>",
+    "1":"To keep this from happening again, the system has changed how approval-required emails are handled. I can still draft, revise, and prepare an email, but <b>I can no longer send an approval-required message on my own.</b> Your approval must be provided before it can be sent, and <b>I cannot override or bypass that requirement.</b>"
   };
 
   function readCode(){
@@ -654,6 +701,19 @@ p{margin:0;}
   document.addEventListener("click", function(ev){
     var t = ev.target;
     if(t && t.classList && t.classList.contains("next") && !t.disabled) advance();
+  });
+
+  /* ---------- completion code ---------- */
+  var copyBtn = document.getElementById("copyCode");
+  copyBtn.addEventListener("click", function(){
+    var txt = document.getElementById("doneCode").textContent;
+    function ok(){ copyBtn.textContent = "Copied"; setTimeout(function(){ copyBtn.textContent = "Copy code"; }, 1600); }
+    try{
+      navigator.clipboard.writeText(txt).then(ok, function(){});
+    }catch(e){
+      var r = document.createRange(); r.selectNodeContents(document.getElementById("doneCode"));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
   });
 
   show(0);
