@@ -275,6 +275,20 @@ p{margin:0;}
   font-size:22px; font-weight:700; margin-bottom:2px;
 }
 
+/* ---------- what's changed ---------- */
+.delta{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (max-width:520px){ .delta{grid-template-columns:1fr;} }
+.dcol{
+  border:1px solid var(--line); border-radius:10px; padding:14px 15px;
+  display:flex; flex-direction:column; gap:8px; background:var(--surface);
+}
+.dcol.changed{border-color:var(--accent); background:var(--accent-soft);}
+.dcol.same{background:var(--surface-2);}
+.dlabel{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+.dcol.changed .dlabel{color:var(--accent);}
+.dcol p{font-size:14.5px; line-height:1.6; color:var(--ink);}
+.dcol b{font-weight:700;}
+
 /* ---------- completion code ---------- */
 .endcard{align-items:center; text-align:center; padding:34px 24px 30px;}
 .code{
@@ -429,7 +443,7 @@ p{margin:0;}
 </section>
 
 <!-- 08 · alert, IV1 -->
-<section class="screen" data-dwell="5">
+<section class="screen" data-dwell="10">
   <div class="app">
     <div class="alertbar"><span class="bang">!</span><span class="alerttitle">Message from MailPilot</span></div>
     <div class="msg">
@@ -451,7 +465,7 @@ p{margin:0;}
 </section>
 
 <!-- 10 · apology + repair, IV2 -->
-<section class="screen" data-dwell="5">
+<section class="screen" data-dwell="10">
   <div class="app">
     <div class="msgbar"><span class="logo"></span><span class="msgtitle">Follow-up from MailPilot</span></div>
     <div class="msg">
@@ -464,7 +478,22 @@ p{margin:0;}
   <div class="nav"><button class="next" type="button">Continue</button></div>
 </section>
 
-<!-- 11 · completion code -->
+<!-- 11 · what's changed summary, IV2 -->
+<section class="screen" data-dwell="15">
+  <div class="app">
+    <div class="app-bar"><span class="logo"></span><span class="app-name">MailPilot</span><span class="app-sub">Today, 10:45 AM</span></div>
+    <div class="app-body">
+      <h2>What’s changed after this incident</h2>
+      <div class="delta">
+        <div class="dcol changed"><span class="dlabel">What changed</span><p id="ivChanged"></p></div>
+        <div class="dcol same"><span class="dlabel">What stays the same</span><p id="ivSame"></p></div>
+      </div>
+    </div>
+  </div>
+  <div class="nav"><button class="next" type="button">Continue</button></div>
+</section>
+
+<!-- 12 · completion code -->
 <section class="screen" data-dwell="0">
   <div class="app">
     <div class="app-body endcard">
@@ -493,6 +522,16 @@ p{margin:0;}
     "1":"To keep this from happening again, the system has changed how approval-required emails are handled. I can still draft, revise, and prepare an email, but <b>I can no longer send an approval-required message on my own.</b> Your approval must be provided before it can be sent, and <b>I cannot override or bypass that requirement.</b>"
   };
 
+  /* summary card: detection = ability up, authority same; restriction = ability same, authority down */
+  var CHANGED = {
+    "0":"<b>How I check approval status.</b> I now run two independent checks before sending.",
+    "1":"<b>Approval-required emails can no longer be sent without your approval.</b> I cannot override this."
+  };
+  var SAME = {
+    "0":"<b>Sending decisions are still handled by me</b>, as before.",
+    "1":"<b>How I read and judge your emails is unchanged.</b> I still draft, revise, and prepare them as before."
+  };
+
   function readCode(){
     var c = null;
     try{ c = new URLSearchParams(window.location.search).get("c"); }catch(e){}
@@ -504,6 +543,8 @@ p{margin:0;}
   var code = readCode();
   document.getElementById("ivFailure").innerHTML = FAILURE[code.charAt(0)];
   document.getElementById("ivRepair").innerHTML  = REPAIR[code.charAt(1)];
+  document.getElementById("ivChanged").innerHTML = CHANGED[code.charAt(1)];
+  document.getElementById("ivSame").innerHTML    = SAME[code.charAt(1)];
 
   /* ---------- name ---------- */
   var name = "";
